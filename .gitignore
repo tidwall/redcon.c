@@ -1,0 +1,15 @@
+# Ignore everything except directories
+*
+
+# But not these files...
+!.gitignore
+!.package
+!README.md
+!redcon.c
+!redcon.h
+!README.md
+!LICENSE
+!logo.png
+
+!/example/
+!/example/**

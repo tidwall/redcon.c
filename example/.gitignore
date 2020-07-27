@@ -1,0 +1,9 @@
+# Ignore everything
+*
+
+# But not these files...
+!.gitignore
+!.package
+!clone.c
+!README.md
+!LICENSE
