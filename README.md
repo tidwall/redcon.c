@@ -26,8 +26,8 @@ Clone this respository and then use [pkg.sh](https://github.com/tidwall/pkg.sh)
 to import dependencies.
 
 ```
-$ git clone https://github.com/tidwall/evio.c
-$ cd evio.c/
+$ git clone https://github.com/tidwall/redcon.c
+$ cd redcon.c/
 $ pkg.sh import
 ```
 
