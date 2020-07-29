@@ -219,7 +219,9 @@ static size_t telnet_parse(char *data, size_t len, struct redcon_conn *conn,
                 if (!buf_append_byte(&arg, ch)) goto fail;
                 if (arg.len > MAXARGSZ) goto fail_argsz;
             } else {
-                if (isspace(ch)) {
+                if (ch == '"' || ch == '\'') {
+                    quote = ch;
+                } else if (isspace(ch)) {
                     if (!append_arg(args, arg.data, arg.len)) goto fail;
                     if (args->len > MAXARGS) goto fail_nargs;
                     arg.len = 0;
