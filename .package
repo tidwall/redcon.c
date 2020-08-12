@@ -1,10 +1,10 @@
 file redcon.h
 file redcon.c
 
-import github.com/tidwall/evio.c v0.3.2
+import github.com/tidwall/evio.c v0.3.3
 import github.com/tidwall/match.c v0.1.2
 
-sum d95617531d62fd326c874faf6b02ce3f6773d979  evio.c
+sum 4eb52409680672e97a9c357d9829e237cd43f690  evio.c
 sum 78971452f055a08847ad27a56ed00976d643256a  evio.h
 sum 1b2a5cf04c46e831a4bc1dfcf1b6eb56c864bbda  buf.c
 sum bf7dc8c49ea1f859967e6446007b3b93a72419ea  buf.h
