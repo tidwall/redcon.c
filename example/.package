@@ -1,2 +1,2 @@
-import github.com/tidwall/match.c v0.1.2
+import github.com/tidwall/match.c v0.2.0
 import ../.package
