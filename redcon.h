@@ -28,7 +28,7 @@ void redcon_conn_write_null(struct redcon_conn *conn);
 
 struct redcon_args;
 
-const char *redcon_args_at(struct redcon_args *args, int index, int *len);
+const char *redcon_args_at(struct redcon_args *args, int index, size_t *len);
 int redcon_args_count(struct redcon_args *args);
 bool redcon_args_eq(struct redcon_args *args, int index, const char *cmd);
 

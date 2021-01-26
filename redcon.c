@@ -49,7 +49,7 @@ struct mainctx {
     struct redcon_args args;
 };
 
-const char *redcon_args_at(struct redcon_args *args, int idx, int *len) {
+const char *redcon_args_at(struct redcon_args *args, int idx, size_t *len) {
     if (len) *len = args->bufs[idx].len;
     return args->bufs[idx].data;
 }
