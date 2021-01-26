@@ -491,7 +491,7 @@ bool redcon_write_null(struct buf *buf) {
     return buf_append(buf, "$-1\r\n", 5);
 }
 
-bool redcon_write_bulk(struct buf *buf, const void *data, int len) {
+bool redcon_write_bulk(struct buf *buf, const void *data, ssize_t len) {
     if (data == NULL) {
         return redcon_write_null(buf);    
     }
@@ -538,12 +538,15 @@ void redcon_conn_write_int(struct redcon_conn *conn, int64_t value) {
     rwrite(redcon_write_int, value);
 }
 
-void redcon_conn_write_bulk(struct redcon_conn *conn, const void *data, int len)
+void redcon_conn_write_bulk(struct redcon_conn *conn, const void *data, 
+                            ssize_t len)
 {
     rwrite(redcon_write_bulk, data, len);
 }
 
-void redcon_conn_write_raw(struct redcon_conn *conn, const void *data,int len) {
+void redcon_conn_write_raw(struct redcon_conn *conn, const void *data, 
+                           ssize_t len)
+{
     rwrite(buf_append, data, len);
 }
 

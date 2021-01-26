@@ -15,13 +15,15 @@ void *redcon_conn_udata(struct redcon_conn *conn);
 void redcon_conn_set_udata(struct redcon_conn *conn, void *udata);
 void redcon_conn_close(struct redcon_conn *conn);
 const char *redcon_conn_addr(struct redcon_conn *conn);
-void redcon_conn_write_raw(struct redcon_conn *conn, const void *data,int len);
+void redcon_conn_write_raw(struct redcon_conn *conn, const void *data, 
+                           ssize_t len);
 void redcon_conn_write_array(struct redcon_conn *conn, int count);
 void redcon_conn_write_string(struct redcon_conn *conn, const char *str);
 void redcon_conn_write_error(struct redcon_conn *conn, const char *err);
 void redcon_conn_write_uint(struct redcon_conn *conn, uint64_t value);
 void redcon_conn_write_int(struct redcon_conn *conn, int64_t value);
-void redcon_conn_write_bulk(struct redcon_conn *conn, const void *data,int len);
+void redcon_conn_write_bulk(struct redcon_conn *conn, const void *data, 
+                            ssize_t len);
 void redcon_conn_write_null(struct redcon_conn *conn);
 
 struct redcon_args;
@@ -53,7 +55,7 @@ bool redcon_write_string(struct buf *buf, const char *str);
 bool redcon_write_error(struct buf *buf, const char *err);
 bool redcon_write_uint(struct buf *buf, uint64_t value);
 bool redcon_write_int(struct buf *buf, int64_t value);
-bool redcon_write_bulk(struct buf *buf, const void *data,int len);
+bool redcon_write_bulk(struct buf *buf, const void *data, ssize_t len);
 bool redcon_write_null(struct buf *buf);
 
 #endif
