@@ -171,7 +171,7 @@ void error(int64_t nano, const char *msg, bool fatal, void *udata) {
 }
 
 bool argtoint(struct redcon_args *args, int index, int64_t *x) {
-    int arglen = 0;
+    size_t arglen = 0;
     const char *arg = redcon_args_at(args, index, &arglen);
     if (strlen(arg) != arglen) return false;
     char *end = NULL;
@@ -206,7 +206,7 @@ bool parse_getopts(struct redcon_conn *conn, struct redcon_args *args,
                 redcon_conn_write_error(conn, "ERR syntax error");
                 return false; 
             }
-            int alen = 0;
+            size_t alen = 0;
             const char *arg = redcon_args_at(args, i, &alen);
             char *end = NULL;
             double x = strtod(arg, &end);
@@ -242,7 +242,7 @@ bool parse_getopts(struct redcon_conn *conn, struct redcon_args *args,
     }
     if (opts->keepttl || opts->nx || opts->xx) {
         struct pair *spair = alloca_pair();
-        int keylen;
+        size_t keylen;
         const char *key = redcon_args_at(args, 1, &keylen);
         struct pair *pkey = pair_new_forkey(key, keylen, spair);
         struct pair **pval = hashmap_get(server->pairs, &pkey);
@@ -266,7 +266,7 @@ void cmdSET(struct redcon_conn *conn, struct redcon_args *args, void *udata) {
         redcon_conn_write_error(conn, "ERR wrong number of arguments");
         return;
     }
-    int keylen, vallen;
+    size_t keylen, vallen;
     const char *key = redcon_args_at(args, 1, &keylen);
     const char *val = redcon_args_at(args, 2, &vallen);
     struct setopts opts = { 0 };
@@ -291,7 +291,7 @@ void cmdGET(struct redcon_conn *conn, struct redcon_args *args, void *udata) {
         return;
     }
     struct pair *spair = alloca_pair();
-    int keylen;
+    size_t keylen;
     const char *key = redcon_args_at(args, 1, &keylen);
     struct pair *pkey = pair_new_forkey(key, keylen, spair);
     struct pair **pval = hashmap_get(server->pairs, &pkey);
@@ -311,7 +311,7 @@ void cmdTTL(struct redcon_conn *conn, struct redcon_args *args, void *udata) {
         return;
     }
     struct pair *spair = alloca_pair();
-    int keylen;
+    size_t keylen;
     const char *key = redcon_args_at(args, 1, &keylen);
     struct pair *pkey = pair_new_forkey(key, keylen, spair);
     struct pair **pval = hashmap_get(server->pairs, &pkey);
@@ -334,7 +334,7 @@ void cmdDEL(struct redcon_conn *conn, struct redcon_args *args, void *udata) {
     int ndels = 0;
     int nargs =  redcon_args_count(args);
     for (int i = 1; i < nargs; i++) {
-        int keylen;
+        size_t keylen;
         const char *key = (char*)redcon_args_at(args, i, &keylen);
         struct pair *pkey = pair_new_forkey(key, keylen, spair);
         struct pair **pval = hashmap_delete(server->pairs, &pkey);
@@ -353,7 +353,7 @@ struct keysctx {
     struct server *server;
     struct buf writer;
     const char *pat;
-    int plen;
+    size_t plen;
     int count;
 };
 
@@ -389,7 +389,7 @@ void cmdPING(struct redcon_conn *conn, struct redcon_args *args, void *udata) {
     if (redcon_args_count(args) == 1) {
         redcon_conn_write_string(conn, "PONG");
     } else if (redcon_args_count(args) == 2) {
-        int len;
+        size_t len;
         const char *arg = redcon_args_at(args, 1, &len);
         redcon_conn_write_bulk(conn, arg, len);
     } else {

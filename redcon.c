@@ -63,7 +63,7 @@ bool redcon_args_eq(struct redcon_args *args, int index, const char *str) {
         return false;
     }
     int slen = strlen(str); 
-    int arglen = 0;
+    size_t arglen = 0;
     const char *arg = redcon_args_at(args, index, &arglen);
     if (arglen != slen) {
         return false;
