@@ -434,7 +434,6 @@ void cmdDBSIZE(struct redcon_conn *conn, struct redcon_args *args,
 void command(struct redcon_conn *conn, struct redcon_args *args, 
              void *udata) 
 {
-    struct server *server = udata;
     if (redcon_args_eq(args, 0, "set")) {
         cmdSET(conn, args, udata);
     } else if (redcon_args_eq(args, 0, "get")) {

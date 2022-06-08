@@ -31,6 +31,11 @@ void redcon_set_allocator(void *(malloc)(size_t), void (*free)(void*)) {
     buf_set_allocator(malloc, free);
 }
 
+struct redcon_args {
+    struct buf *bufs;
+    int len, cap;
+};
+
 struct redcon_conn {
     bool closed;
     struct evio_conn *econn;
@@ -38,18 +43,13 @@ struct redcon_conn {
     struct buf wrbuf;
     void *udata;
     int nls;    
+    struct redcon_args args;
 };
 
-struct redcon_args {
-    struct buf *bufs;
-    int len, cap;
-};
 
 struct mainctx {
-    bool mt;
     void *udata;
     struct redcon_events *events;
-    struct redcon_args args;
 };
 
 const char *redcon_args_at(struct redcon_args *args, int idx, size_t *len) {
@@ -114,12 +114,16 @@ static struct redcon_conn *redcon_conn_new(struct evio_conn *econn) {
     return conn;
 }
 
-static void redcon_free(struct redcon_conn *conn) {
+static void redcon_conn_free(struct redcon_conn *conn) {
     if (!conn) {
         return;
     }
     buf_clear(&conn->packet);
     buf_clear(&conn->wrbuf);
+    for (int i = 0 ; i < conn->args.cap; i++) {
+        buf_clear(&conn->args.bufs[i]);
+    }
+    rcfree(conn->args.bufs);
     rcfree(conn);
 }
 
@@ -180,7 +184,7 @@ static void closed(struct evio_conn *econn, void *udata) {
         if (ctx->events->closed) {
            ctx->events->closed(conn, ctx->udata);
         }   
-        redcon_free(conn);
+        redcon_conn_free(conn);
     }
 }
 
@@ -365,9 +369,9 @@ static void data(struct evio_conn *econn,
     while (len > 0 && !conn->closed) {
         size_t n;
         if (data[0] != '*') {
-            n = telnet_parse(data, len, conn, &ctx->args);
+            n = telnet_parse(data, len, conn, &conn->args);
         } else {
-            n = resp_parse(data, len, conn, &ctx->args);
+            n = resp_parse(data, len, conn, &conn->args);
         }
         if (n == 0) {
             break;
@@ -376,14 +380,14 @@ static void data(struct evio_conn *econn,
             conn->closed = true;
             break;
         }
-        if (ctx->args.len > 0) {            
-            if (redcon_args_eq(&ctx->args, 0, "quit")) {
+        if (conn->args.len > 0) {            
+            if (redcon_args_eq(&conn->args, 0, "quit")) {
                 redcon_conn_write_string(conn, "OK");
                 conn->closed = true;
                 break;
             }
             if (ctx->events->command) {
-                ctx->events->command(conn, &ctx->args, ctx->udata);
+                ctx->events->command(conn, &conn->args, ctx->udata);
             }
         }
         len -= n;
@@ -420,7 +424,6 @@ void redcon_main_mt(const char **addrs, int naddrs,
                     struct redcon_events events, void *udata, int nthreads) 
 {
     struct mainctx ctx = {
-        .mt = nthreads != 1,
         .udata = udata,
         .events = &events,
     };
