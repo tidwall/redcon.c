@@ -1,4 +1,6 @@
-// Copyright 2020 Joshua J Baker. All rights reserved.
+// Copyright 2022 Joshua J Baker. All rights reserved.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
 // Documentation at https://github.com/tidwall/redcon.c
 
 #ifndef REDCON_H
@@ -33,18 +35,20 @@ int redcon_args_count(struct redcon_args *args);
 bool redcon_args_eq(struct redcon_args *args, int index, const char *cmd);
 
 struct redcon_events {
-    int64_t (*tick)(int64_t nano, void *udata);
-    bool (*sync)(int64_t nano, void *udata);
-    void (*command)(int64_t nano, struct redcon_conn *conn, 
+    int64_t (*tick)(void *udata);
+    bool (*sync)(void *udata);
+    void (*command)(struct redcon_conn *conn, 
                     struct redcon_args *args, void *udata);
-    void (*opened)(int64_t nano, struct redcon_conn *conn, void *udata);
-    void (*closed)(int64_t nano, struct redcon_conn *conn, void *udata);
-    void (*serving)(int64_t nano, const char **addrs, int naddrs, void *udata);
-    void (*error)(int64_t nano, const char *message, bool fatal, void *udata);
+    void (*opened)(struct redcon_conn *conn, void *udata);
+    void (*closed)(struct redcon_conn *conn, void *udata);
+    void (*serving)(const char **addrs, int naddrs, void *udata);
+    void (*error)(const char *message, bool fatal, void *udata);
 };
 
 void redcon_main(const char **addrs, int naddrs, struct redcon_events events, 
                  void *udata);
+void redcon_main_mt(const char **addrs, int naddrs,
+                    struct redcon_events events, void *udata, int nthreads);
 
 void redcon_set_allocator(void *(malloc)(size_t), void (*free)(void*));
 
@@ -57,5 +61,7 @@ bool redcon_write_uint(struct buf *buf, uint64_t value);
 bool redcon_write_int(struct buf *buf, int64_t value);
 bool redcon_write_bulk(struct buf *buf, const void *data, ssize_t len);
 bool redcon_write_null(struct buf *buf);
+
+int64_t redcon_now();
 
 #endif

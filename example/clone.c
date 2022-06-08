@@ -28,9 +28,9 @@ void xfree(void *ptr) {
 }
 
 struct server {
-    double now;
     uint64_t next_check;
     struct hashmap *pairs;
+    int64_t now;
 };
 
 struct pair {
@@ -135,9 +135,9 @@ int key_compare(const void *a, const void *b, void *udata) {
     return cmp;
 }
 
-int64_t tick(int64_t nano, void *udata) {
+int64_t tick(void *udata) {
     struct server *server = udata;
-    server->now = (double)nano / 1e9;
+    server->now = (double)redcon_now() / 1e9;
     int npairs = hashmap_count(server->pairs);
     int count = 0;
     int dels = 0;
@@ -159,14 +159,14 @@ int64_t tick(int64_t nano, void *udata) {
     return 50e6; // back off for 50 ms
 }
 
-void serving(int64_t nano, const char **addrs, int naddrs, void *udata) {
+void serving(const char **addrs, int naddrs, void *udata) {
     for (int i = 0; i < naddrs; i++) {
         printf("* Listening at %s\n", addrs[i]);
     }
     printf("* Ready to accept connections\n");
 }
 
-void error(int64_t nano, const char *msg, bool fatal, void *udata) {
+void error(const char *msg, bool fatal, void *udata) {
     fprintf(stderr, "- %s\n", msg);
 }
 
@@ -218,7 +218,7 @@ bool parse_getopts(struct redcon_conn *conn, struct redcon_args *args,
                 redcon_conn_write_error(conn, "ERR invalid expire time in set");
                 return false;
             }
-            opts->expire = (ex ? x : x / 1000.0) + server->now;
+            // opts->expire = (ex ? x : x / 1000.0) + server->now;
             ex = true;
         } else if (redcon_args_eq(args, i, "nx")) {
             if (opts->xx) {
@@ -414,7 +414,7 @@ void cmdFLUSHDB(struct redcon_conn *conn, struct redcon_args *args,
     hashmap_scan(server->pairs, flushiter, NULL);
     hashmap_free(server->pairs);
     server->pairs = hashmap_new(sizeof(struct pair*), 0, 0, 0, key_hash, 
-                                key_compare, NULL);
+                                key_compare, NULL, NULL);
     redcon_conn_write_string(conn, "OK");
 }
 
@@ -431,11 +431,10 @@ void cmdDBSIZE(struct redcon_conn *conn, struct redcon_args *args,
     redcon_conn_write_uint(conn, count);
 }
 
-void command(int64_t nano, struct redcon_conn *conn, struct redcon_args *args, 
+void command(struct redcon_conn *conn, struct redcon_args *args, 
              void *udata) 
 {
     struct server *server = udata;
-    server->now = (double)nano / 1e9;
     if (redcon_args_eq(args, 0, "set")) {
         cmdSET(conn, args, udata);
     } else if (redcon_args_eq(args, 0, "get")) {
@@ -464,7 +463,7 @@ int main() {
 
     struct server server = { 0 };
     server.pairs = hashmap_new(sizeof(struct pair *), 0, 0, 0, 
-                               key_hash, key_compare, NULL);
+                               key_hash, key_compare, NULL, NULL);
     struct redcon_events evs = {
         .tick = tick,
         .serving = serving,

@@ -15,7 +15,7 @@ Redcon is a custom Redis server framework that is fast and simple to use. This i
 
 - Create a [Fast](#benchmarks) custom Redis compatible server in C
 - Simple interface
-- Single-theaded
+- [Multithread](#multithreading) support
 - Super lightweight
 - Support for pipelining and telnet commands
 - Works with Redis clients such as [redigo](https://github.com/garyburd/redigo), [redis-py](https://github.com/andymccurdy/redis-py), [node_redis](https://github.com/NodeRedis/node_redis), and [jedis](https://github.com/xetorthio/jedis)
@@ -162,6 +162,23 @@ And connect using the [Redis cli](https://redis.io/download).
 ```
 $ redis-cli -p 6380
 ```
+
+## Multithreading
+
+Use the redcon_main_mt function to start the server using multiple threads.
+
+```c
+// Use five threads
+redcon_main(addrs, 1, evs, NULL, 5);
+
+// Use ten threads
+redcon_main(addrs, 1, evs, NULL, 10);
+
+// Use the number of threads equal to the number of cores on the machine.
+redcon_main(addrs, 1, evs, NULL, 0);
+```
+
+
 
 ## Benchmarks
 

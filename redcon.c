@@ -1,4 +1,6 @@
-// Copyright 2020 Joshua J Baker. All rights reserved.
+// Copyright 2022 Joshua J Baker. All rights reserved.
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
 // Documentation at https://github.com/tidwall/redcon.c
 
 #include <inttypes.h>
@@ -35,7 +37,7 @@ struct redcon_conn {
     struct buf packet;
     struct buf wrbuf;
     void *udata;
-    int nls;
+    int nls;    
 };
 
 struct redcon_args {
@@ -44,6 +46,7 @@ struct redcon_args {
 };
 
 struct mainctx {
+    bool mt;
     void *udata;
     struct redcon_events *events;
     struct redcon_args args;
@@ -97,6 +100,10 @@ static bool append_arg(struct redcon_args *args, const char *data, size_t len) {
     return true;
 }
 
+int64_t redcon_now() {
+    return evio_now();
+}
+
 static struct redcon_conn *redcon_conn_new(struct evio_conn *econn) {
     struct redcon_conn *conn = rcmalloc(sizeof(struct redcon_conn));
     if (!conn) {
@@ -134,17 +141,25 @@ const char *redcon_conn_addr(struct redcon_conn *conn) {
     return evio_conn_addr(conn->econn);
 }
 
-static int64_t tick(int64_t nano, void *udata) {
+static int64_t tick(void *udata) {
     struct mainctx *ctx = udata;
-    return ctx->events->tick(nano, ctx->udata);
+    if (ctx->events->tick) {
+        return ctx->events->tick(ctx->udata);
+    } else {
+        return 50e6; // back off for 50 ms
+    }
 }
 
-static bool sync(int64_t nano, void *udata) {
+static bool sync(void *udata) {
     struct mainctx *ctx = udata;
-    return ctx->events->sync(nano, ctx->udata);
+    if (ctx->events->sync) {
+        return ctx->events->sync(ctx->udata);
+    } else {
+        return true;
+    }
 }
 
-static void opened(int64_t nano, struct evio_conn *econn, void *udata) {
+static void opened(struct evio_conn *econn, void *udata) {
     struct mainctx *ctx = udata;
     struct redcon_conn *conn = redcon_conn_new(econn);
     if (!conn) {
@@ -153,30 +168,34 @@ static void opened(int64_t nano, struct evio_conn *econn, void *udata) {
     }
     evio_conn_set_udata(econn, conn);
     if (ctx->events->opened) {
-        ctx->events->opened(nano, conn, ctx->udata);
+        ctx->events->opened(conn, ctx->udata);
     }
 }
 
-static void closed(int64_t nano, struct evio_conn *econn, void *udata) {
+static void closed(struct evio_conn *econn, void *udata) {
     struct mainctx *ctx = udata;
     struct redcon_conn *conn = evio_conn_udata(econn);
     if (conn) {
         conn->closed = true;
         if (ctx->events->closed) {
-           ctx->events->closed(nano, conn, ctx->udata);
+           ctx->events->closed(conn, ctx->udata);
         }   
         redcon_free(conn);
     }
 }
 
-static void serving(int64_t nano, const char **addrs, int naddrs, void *udata) {
+static void serving(const char **addrs, int naddrs, void *udata) {
     struct mainctx *ctx = udata;
-    return ctx->events->serving(nano, addrs, naddrs, ctx->udata);
+    if (ctx->events->serving) {
+        ctx->events->serving(addrs, naddrs, ctx->udata);
+    }
 }
 
-static void error(int64_t nano, const char *message, bool fatal, void *udata) {
+static void error(const char *message, bool fatal, void *udata) {
     struct mainctx *ctx = udata;
-    return ctx->events->error(nano, message, fatal, ctx->udata);
+    if (ctx->events->error) {
+        ctx->events->error(message, fatal, ctx->udata);
+    }
 }
 
 static size_t telnet_parse(char *data, size_t len, struct redcon_conn *conn, 
@@ -317,7 +336,7 @@ static size_t resp_parse(char *data, size_t len, struct redcon_conn *conn,
     return i;
 }
 
-static void data(int64_t nano, struct evio_conn *econn, 
+static void data(struct evio_conn *econn, 
                  const void *edata, size_t elen, void *udata)
 {
     struct mainctx *ctx = udata;
@@ -364,7 +383,7 @@ static void data(int64_t nano, struct evio_conn *econn,
                 break;
             }
             if (ctx->events->command) {
-                ctx->events->command(nano, conn, &ctx->args, ctx->udata);
+                ctx->events->command(conn, &ctx->args, ctx->udata);
             }
         }
         len -= n;
@@ -397,10 +416,11 @@ close:
     return;
 }
 
-void redcon_main(const char **addrs, int naddrs, struct redcon_events events, 
-                 void *udata) 
+void redcon_main_mt(const char **addrs, int naddrs, 
+                    struct redcon_events events, void *udata, int nthreads) 
 {
     struct mainctx ctx = {
+        .mt = nthreads != 1,
         .udata = udata,
         .events = &events,
     };
@@ -413,8 +433,13 @@ void redcon_main(const char **addrs, int naddrs, struct redcon_events events,
         .serving = events.serving?serving:NULL,
         .error = events.error?error:NULL,
     };
-    evio_main(addrs, naddrs, eevents, &ctx); 
-    exit(1);
+    evio_main_mt(addrs, naddrs, eevents, &ctx, nthreads); 
+}
+
+void redcon_main(const char **addrs, int naddrs, struct redcon_events events, 
+                 void *udata) 
+{
+    redcon_main_mt(addrs, naddrs, events, udata, 1);
 }
 
 static bool writeln(struct buf *buf, char ch, const void *data, ssize_t len) {
