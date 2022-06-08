@@ -103,7 +103,7 @@ void cmdPING(struct redcon_conn *conn, struct redcon_args *args, void *udata) {
     redcon_conn_write_string(conn, "PONG");
 }
 
-void command(int64_t nano, struct redcon_conn *conn, struct redcon_args *args, void *udata) {
+void command(struct redcon_conn *conn, struct redcon_args *args, void *udata) {
          if (redcon_args_eq(args, 0, "set"))  cmdSET(conn, args, udata);
     else if (redcon_args_eq(args, 0, "get"))  cmdGET(conn, args, udata);
     else if (redcon_args_eq(args, 0, "del"))  cmdDEL(conn, args, udata);
@@ -111,11 +111,11 @@ void command(int64_t nano, struct redcon_conn *conn, struct redcon_args *args, v
     else redcon_conn_write_error(conn, "ERR unknown command");
 }
 
-void serving(int64_t nano, const char **addrs, int naddrs, void *udata) {
+void serving(const char **addrs, int naddrs, void *udata) {
     printf("* Listening at %s\n", addrs[0]);
 }
 
-void error(int64_t nano, const char *msg, bool fatal, void *udata) {
+void error(const char *msg, bool fatal, void *udata) {
     fprintf(stderr, "- %s\n", msg);
 }
 
