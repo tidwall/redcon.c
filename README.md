@@ -169,13 +169,13 @@ Use the redcon_main_mt function to start the server using multiple threads.
 
 ```c
 // Use five threads
-redcon_main(addrs, 1, evs, NULL, 5);
+redcon_main_mt(addrs, 1, evs, NULL, 5);
 
 // Use ten threads
-redcon_main(addrs, 1, evs, NULL, 10);
+redcon_main_mt(addrs, 1, evs, NULL, 10);
 
 // Use the number of threads equal to the number of cores on the machine.
-redcon_main(addrs, 1, evs, NULL, 0);
+redcon_main_mt(addrs, 1, evs, NULL, 0);
 ```
 
 
