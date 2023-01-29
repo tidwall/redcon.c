@@ -20,6 +20,8 @@ Redcon is a custom Redis server framework that is fast and simple to use. This i
 - Support for pipelining and telnet commands
 - Works with Redis clients such as [redigo](https://github.com/garyburd/redigo), [redis-py](https://github.com/andymccurdy/redis-py), [node_redis](https://github.com/NodeRedis/node_redis), and [jedis](https://github.com/xetorthio/jedis)
 
+*This library is also avaliable for [Go](https://github.com/tidwall/redcon) and [Rust](https://github.com/tidwall/redcon.rs).*
+
 ## Install
 
 Clone this respository and then use [pkg.sh](https://github.com/tidwall/pkg.sh)
