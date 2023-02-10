@@ -1,4 +1,4 @@
 file redcon.h
 file redcon.c
 
-import github.com/tidwall/evio.c v0.4.2
+import github.com/tidwall/evio.c v0.4.3
