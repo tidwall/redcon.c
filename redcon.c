@@ -315,7 +315,8 @@ static size_t resp_parse(char *data, size_t len, struct redcon_conn *conn,
         if (i == len) return 0;
         if (data[i] != '$') {
             char str[64];
-            sprintf(str, "ERR Protocol error: expected '$', got '%c'", data[i]);
+            snprintf(str, sizeof(str), 
+                "ERR Protocol error: expected '$', got '%c'", data[i]);
             redcon_conn_write_error(conn, str);
             return -1;
         }
