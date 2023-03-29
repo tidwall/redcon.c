@@ -65,13 +65,13 @@ bool redcon_args_eq(struct redcon_args *args, int index, const char *str) {
     if (index >= redcon_args_count(args)) {
         return false;
     }
-    int slen = strlen(str); 
+    size_t slen = strlen(str); 
     size_t arglen = 0;
     const char *arg = redcon_args_at(args, index, &arglen);
     if (arglen != slen) {
         return false;
     }
-    for (int i = 0; i < slen ; i++) {
+    for (size_t i = 0; i < slen ; i++) {
         if (tolower(str[i]) != tolower(arg[i])) {
             return false;
         }
@@ -202,6 +202,9 @@ static void error(const char *message, bool fatal, void *udata) {
     }
 }
 
+// returns the number of bytes read from data.
+// returns SIZE_MAX on error
+// returns 0 when there isn't enough data to complete a command.
 static size_t telnet_parse(char *data, size_t len, struct redcon_conn *conn, 
                            struct redcon_args *args)
 {
@@ -285,16 +288,19 @@ fail:
         redcon_conn_write_error(conn, err);
     }
     buf_clear(&arg);
-    return -1;
+    return SIZE_MAX;
 }
 
+// returns the number of bytes read from data.
+// returns SIZE_MAX on error
+// returns 0 when there isn't enough data to complete a command.
 static size_t resp_parse(char *data, size_t len, struct redcon_conn *conn, 
                          struct redcon_args *args)
 {
     args->len = 0;
     size_t i = 0;
     if (len == 0 || data[i] != '*') {
-        return -1;
+        return SIZE_MAX;
     }
     i++;
     if (i == len) return 0;
@@ -306,7 +312,7 @@ static size_t resp_parse(char *data, size_t len, struct redcon_conn *conn,
     {
         redcon_conn_write_error(conn, 
             "ERR Protocol error: invalid multibulk length");
-        return -1;
+        return SIZE_MAX;
     }
     i += (end-(data+i))+2;
     // loop through each argument
@@ -318,7 +324,7 @@ static size_t resp_parse(char *data, size_t len, struct redcon_conn *conn,
             snprintf(str, sizeof(str), 
                 "ERR Protocol error: expected '$', got '%c'", data[i]);
             redcon_conn_write_error(conn, str);
-            return -1;
+            return SIZE_MAX;
         }
         i++;
         if (i == len) return 0;
@@ -329,12 +335,12 @@ static size_t resp_parse(char *data, size_t len, struct redcon_conn *conn,
         {
             redcon_conn_write_error(conn, 
                 "ERR Protocol error: invalid bulk length");
-            return -1;
+            return SIZE_MAX;
         }
         i += (end-(data+i))+2;
         if (i+nbytes+2 > len) return 0;
         if (!append_arg(args, data+i, nbytes)) {
-            return -1;
+            return SIZE_MAX;
         }
         i += nbytes+2;
     }
@@ -377,7 +383,7 @@ static void data(struct evio_conn *econn,
         if (n == 0) {
             break;
         }
-        if (n == -1) {
+        if (n == SIZE_MAX) {
             conn->closed = true;
             break;
         }
