@@ -7,6 +7,11 @@
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
+
+#ifdef USEMT
+#include <pthread.h>
+#endif /* USEMT */
+
 #include <string.h>
 #include "redcon.h"
 #include "hashmap.h"
@@ -28,6 +33,9 @@ void xfree(void *ptr) {
 }
 
 struct server {
+#ifdef USEMT
+    pthread_rwlock_t rwlock;
+#endif /* USEMT */
     uint64_t next_check;
     struct hashmap *pairs;
     int64_t now;
@@ -434,25 +442,60 @@ void cmdDBSIZE(struct redcon_conn *conn, struct redcon_args *args,
 void command(struct redcon_conn *conn, struct redcon_args *args, 
              void *udata) 
 {
-    if (redcon_args_eq(args, 0, "set")) {
-        cmdSET(conn, args, udata);
-    } else if (redcon_args_eq(args, 0, "get")) {
-        cmdGET(conn, args, udata);
-    } else if (redcon_args_eq(args, 0, "ping")) {
-        cmdPING(conn, args, udata);
-    } else if (redcon_args_eq(args, 0, "del")) {
-        cmdDEL(conn, args, udata);
-    } else if (redcon_args_eq(args, 0, "ttl")) {
-        cmdTTL(conn, args, udata);
-    } else if (redcon_args_eq(args, 0, "keys")) {
-        cmdKEYS(conn, args, udata);
-    } else if (redcon_args_eq(args, 0, "dbsize")) {
-        cmdDBSIZE(conn, args, udata);
-    } else if (redcon_args_eq(args, 0, "flushdb")) {
-        cmdFLUSHDB(conn, args, udata);
-    } else { 
-        redcon_conn_write_error(conn, "ERR unknown command");
+    typedef void (*handler_fp_t)(struct redcon_conn *conn,
+        struct redcon_args *args, void *udata);
+
+    #define FLG_NONE          0x00
+    #define FLG_RWLOCK        0x01
+    #define FLG_EXCLUSIVE     0x02
+
+    struct {
+        const char     *command;
+        handler_fp_t    handler;
+        int             flags;
+    } commands[] = {
+        { "get",        cmdGET,       (FLG_RWLOCK) },
+        { "set",        cmdSET,       (FLG_RWLOCK | FLG_EXCLUSIVE) },
+        { "del",        cmdDEL,       (FLG_RWLOCK | FLG_EXCLUSIVE) },
+        { "ttl",        cmdTTL,       (FLG_RWLOCK) },
+        { "keys",       cmdKEYS,      (FLG_RWLOCK) },
+        { "dbsize",     cmdDBSIZE,    (FLG_RWLOCK) },
+        { "flushdb",    cmdFLUSHDB,   (FLG_RWLOCK | FLG_EXCLUSIVE) },
+        { "ping",       cmdPING,      (FLG_NONE) },
+    };
+
+    for (int idx = 0; idx < (sizeof(commands) / sizeof(commands[0])); ++idx) {
+      if (redcon_args_eq(args, 0, commands[idx].command)) {
+#ifdef USEMT
+        #define HAS_FLAG(flags, flag)   ((flags & (flag)) == (flag))
+        struct server *server = udata;
+        if (HAS_FLAG(commands[idx].flags, FLG_RWLOCK)) {
+            if (HAS_FLAG(commands[idx].flags, FLG_EXCLUSIVE)) {
+                pthread_rwlock_wrlock(&server->rwlock);
+            } else {
+                pthread_rwlock_rdlock(&server->rwlock);
+            }
+        }
+#endif /* USEMT */
+
+        commands[idx].handler(conn, args, udata);
+
+#ifdef USEMT
+        if (HAS_FLAG(commands[idx].flags, FLG_RWLOCK)) {
+            pthread_rwlock_unlock(&server->rwlock);
+        }
+        #undef HAS_FLAG
+#endif /* USEMT */
+
+        return;
+      }
     }
+
+    redcon_conn_write_error(conn, "ERR unknown command");
+
+    #undef FLG_EXCLUSIVE
+    #undef FLG_RWLOCK
+    #undef FLG_NONE
 }
 
 int main() {
@@ -472,5 +515,10 @@ int main() {
     const char *addrs[] = { 
         "tcp://localhost:6380",
     };
+#ifdef USEMT
+    pthread_rwlock_init(&server.rwlock, 0);
+    redcon_main_mt(addrs, sizeof(addrs)/sizeof(char*), evs, &server, 0);
+#else
     redcon_main(addrs, sizeof(addrs)/sizeof(char*), evs, &server);
+#endif /* USEMT */
 }
