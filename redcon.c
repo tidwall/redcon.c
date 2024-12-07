@@ -588,3 +588,7 @@ void redcon_conn_write_raw(struct redcon_conn *conn, const void *data,
 void redcon_conn_write_null(struct redcon_conn *conn) {
     rwrite(redcon_write_null);
 }
+
+int redcon_nthreads(void) {
+    return evio_nthreads();
+}

@@ -45,6 +45,8 @@ struct redcon_events {
     void (*error)(const char *message, bool fatal, void *udata);
 };
 
+int redcon_nthreads(void);
+
 void redcon_main(const char **addrs, int naddrs, struct redcon_events events, 
                  void *udata);
 void redcon_main_mt(const char **addrs, int naddrs,
