@@ -330,7 +330,7 @@ static size_t resp_parse(char *data, size_t len, struct redcon_conn *conn,
         if (i == len) return 0;
         if (!memchr(data+i, '\n', len-i)) return 0;
         long nbytes = strtol(data+i, &end, 10);
-        if (end == data+i || nbytes > MAXARGSZ || 
+        if (end == data+i || nbytes < 0 || nbytes > MAXARGSZ || 
             end[0] != '\r' || end[1] != '\n') 
         {
             redcon_conn_write_error(conn, 
